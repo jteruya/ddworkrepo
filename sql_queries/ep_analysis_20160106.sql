@@ -63,6 +63,123 @@ and date >= '2015-08-01'
 group by 1
 order by 2 desc;
 
+
+-------- Josh Request 2016-02-09 ---------
+
+-- Constrain Numbers to:
+-- (1) Clicks that occurred during the time Ratings Dashboards was used.
+-- (2) Users that have access to 1 event (No event tracking at the time).
+select event_label as "Link Label"
+     , count(distinct a.global_user_id) as "Unique User Count"
+     , count(distinct case when a.date < c.startdate then a.global_user_id else null end) as "Unique Users that Clicked Link Before Event Count"
+     , count(distinct case when a.date >= c.startdate and a.date <= c.enddate then a.global_user_id else null end) as "Unique Users that Clicked Link During Event Count"
+     , count(distinct case when a.date > c.enddate then a.global_user_id else null end) as "Unique Users that Clicked Link After Event Count"
+     --, count(distinct case when a.date < c.startdate then a.global_user_id else null end)::decimal(12,4)/count(distinct a.global_user_id)::decimal(12,4) as beforeuserpct
+     --, count(distinct case when a.date >= c.startdate and a.date <= c.enddate then a.global_user_id else null end)::decimal(12,4)/count(distinct a.global_user_id)::decimal(12,4) as duringuserpct
+     --, count(distinct case when a.date > c.enddate then a.global_user_id else null end)::decimal(12,4)/count(distinct a.global_user_id)::decimal(12,4) as afteruserpct
+from google.ep_event_counts a
+join jt.ep_all_users b
+on a.global_user_id = lower(b.globaluserid)
+join (select usercnt.userid
+           , usercnt.applicationid
+           , events.startdate
+           , events.enddate
+      from (select userid
+                 , applicationid
+                 , count(*) over (partition by userid) as eventcnt
+            from ratings_dashboardusers) usercnt
+            join authdb_applications events
+            on usercnt.applicationid = events.applicationid
+      where usercnt.eventcnt = 1) c
+on b.userid = c.userid
+where event_category = 'href'
+and date >= '2015-08-01'
+-- Last Day of Ratings Dashboard Users
+and date < '2015-12-05'
+group by 1
+order by 2 desc;
+
+
+-- Before Event:
+select event_label as linklabel
+     , count(distinct case when a.date < c.startdate then a.global_user_id else null end) as beforeusercnt
+from google.ep_event_counts a
+join jt.ep_all_users b
+on a.global_user_id = lower(b.globaluserid)
+join (select usercnt.userid
+           , usercnt.applicationid
+           , events.startdate
+           , events.enddate
+      from (select userid
+                 , applicationid
+                 , count(*) over (partition by userid) as eventcnt
+            from ratings_dashboardusers) usercnt
+            join authdb_applications events
+            on usercnt.applicationid = events.applicationid
+      where usercnt.eventcnt = 1) c
+on b.userid = c.userid
+where event_category = 'href'
+and date >= '2015-08-01'
+-- Last Day of Ratings Dashboard Users
+and date < '2015-12-05'
+group by 1
+order by 2 desc;
+
+-- During Event
+select event_label as linklabel
+     , count(distinct case when a.date >= c.startdate and a.date <= c.enddate then a.global_user_id else null end) as duringusercnt
+from google.ep_event_counts a
+join jt.ep_all_users b
+on a.global_user_id = lower(b.globaluserid)
+join (select usercnt.userid
+           , usercnt.applicationid
+           , events.startdate
+           , events.enddate
+      from (select userid
+                 , applicationid
+                 , count(*) over (partition by userid) as eventcnt
+            from ratings_dashboardusers) usercnt
+            join authdb_applications events
+            on usercnt.applicationid = events.applicationid
+      where usercnt.eventcnt = 1) c
+on b.userid = c.userid
+where event_category = 'href'
+and date >= '2015-08-01'
+-- Last Day of Ratings Dashboard Users
+and date < '2015-12-05'
+group by 1
+order by 2 desc;
+
+
+-- After Event
+select event_label as linklabel
+     , count(distinct case when a.date > c.enddate then a.global_user_id else null end) as afterusercnt
+from google.ep_event_counts a
+join jt.ep_all_users b
+on a.global_user_id = lower(b.globaluserid)
+join (select usercnt.userid
+           , usercnt.applicationid
+           , events.startdate
+           , events.enddate
+      from (select userid
+                 , applicationid
+                 , count(*) over (partition by userid) as eventcnt
+            from ratings_dashboardusers) usercnt
+            join authdb_applications events
+            on usercnt.applicationid = events.applicationid
+      where usercnt.eventcnt = 1) c
+on b.userid = c.userid
+where event_category = 'href'
+and date >= '2015-08-01'
+-- Last Day of Ratings Dashboard Users
+and date < '2015-12-05'
+group by 1
+order by 2 desc;
+
+------------ 
+
+
+
 select count(distinct a.global_user_id) as usercnt
 from google.ep_event_counts a
 join jt.ep_all_users b
