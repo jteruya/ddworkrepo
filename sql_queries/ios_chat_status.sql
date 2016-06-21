@@ -1,0 +1,107 @@
+-- Check to see if all 23 events are on US server.
+
+select count(distinct applicationid)
+from authdb_applications
+where applicationid in (
+'549957CE-8FFE-40B5-BFAA-1A4DC0DAE0B0',
+'A3EB64A5-880C-45CE-9B89-FB124CDF5D3A',
+'76E9BBF1-D637-4D6E-9D3F-245C178725BA',
+'86E856EA-3902-432E-B8BB-6A8528FF3B08',
+'8B30DD22-854F-4301-B6F1-19B4F243AF58',
+'4C8D5B7D-BA6B-4A5D-8613-E97B7EC3C020',
+'5F98B1B0-4954-4AD0-B08C-5F5CEEC88612',
+'39D51E66-EB65-4B1E-8005-9B8097745067',
+'E0A5E4E5-1AB4-45A3-BEB5-828AFEC3871E',
+'B5C28F48-DCCB-4F37-86C6-E6A92BB076EF',
+'59D76EDA-B25C-4FCB-8935-2A12C29DAFAB',
+'0BDD6FBC-94B7-4F72-B770-64420C32AD61',
+'505CEE83-0A47-4A31-8884-D314FBE75122',
+'64C2A5AA-C710-4C34-8A3D-585E1C91E7BC',
+'A8D67223-4D3E-40FB-B3B6-FF0F20462C1B',
+'467C26F4-A0ED-46B8-9950-7B5E8A64E700',
+'99657CAA-B017-4D29-B0BB-941E785AC436',
+'16251D71-C74C-4058-9397-E394AA05B7B6',
+'8A0CBAE6-B411-44BB-9EB8-5925F67CECA2',
+'70B70E79-3DDC-425E-8BAB-0896776EB7F0',
+'3F12CD74-9219-4F5D-96F8-3EC75814ADB0',
+'1CE6FEF4-00B8-4328-955B-DE6DFA6AE347',
+'78B847E0-E971-4F00-A9AB-8CB24F968C53');
+
+-- 23
+-- Yes, all are on US server.
+
+create table jt.ios_chat_users as
+select distinct applicationid
+     , globaluserid
+from authdb_is_users
+where applicationid in (
+'549957CE-8FFE-40B5-BFAA-1A4DC0DAE0B0',
+'A3EB64A5-880C-45CE-9B89-FB124CDF5D3A',
+'76E9BBF1-D637-4D6E-9D3F-245C178725BA',
+'86E856EA-3902-432E-B8BB-6A8528FF3B08',
+'8B30DD22-854F-4301-B6F1-19B4F243AF58',
+'4C8D5B7D-BA6B-4A5D-8613-E97B7EC3C020',
+'5F98B1B0-4954-4AD0-B08C-5F5CEEC88612',
+'39D51E66-EB65-4B1E-8005-9B8097745067',
+'E0A5E4E5-1AB4-45A3-BEB5-828AFEC3871E',
+'B5C28F48-DCCB-4F37-86C6-E6A92BB076EF',
+'59D76EDA-B25C-4FCB-8935-2A12C29DAFAB',
+'0BDD6FBC-94B7-4F72-B770-64420C32AD61',
+'505CEE83-0A47-4A31-8884-D314FBE75122',
+'64C2A5AA-C710-4C34-8A3D-585E1C91E7BC',
+'A8D67223-4D3E-40FB-B3B6-FF0F20462C1B',
+'467C26F4-A0ED-46B8-9950-7B5E8A64E700',
+'99657CAA-B017-4D29-B0BB-941E785AC436',
+'16251D71-C74C-4058-9397-E394AA05B7B6',
+'8A0CBAE6-B411-44BB-9EB8-5925F67CECA2',
+'70B70E79-3DDC-425E-8BAB-0896776EB7F0',
+'3F12CD74-9219-4F5D-96F8-3EC75814ADB0',
+'1CE6FEF4-00B8-4328-955B-DE6DFA6AE347',
+'78B847E0-E971-4F00-A9AB-8CB24F968C53')
+and isdisabled = 0;
+
+
+
+
+select views.application_id
+     , views.binary_version
+     , count(distinct views.global_user_id) as usercnt
+     , count(distinct case when rooms.type = 'GROUP' then views.global_user_id else null end) as dmusercnt     
+     , count(distinct case when rooms.type = 'TOPIC' then views.global_user_id else null end) as tcusercnt
+from jt.ios_chat_users users
+left join fact_views_live views
+on lower(users.applicationid) = views.application_id
+and lower(users.globaluserid) = views.global_user_id
+join channels.rooms rooms
+on cast(views.metadata->>'ChannelId' as bigint) = rooms.id
+where (rooms.type = 'TOPIC' or rooms.type = 'GROUP')
+and views.identifier = 'chat'
+and views.device_type = 'ios'
+and views.application_id in (
+'549957ce-8ffe-40b5-bfaa-1a4dc0dae0b0',
+'a3eb64a5-880c-45ce-9b89-fb124cdf5d3a',
+'76e9bbf1-d637-4d6e-9d3f-245c178725ba',
+'86e856ea-3902-432e-b8bb-6a8528ff3b08',
+'8b30dd22-854f-4301-b6f1-19b4f243af58',
+'4c8d5b7d-ba6b-4a5d-8613-e97b7ec3c020',
+'5f98b1b0-4954-4ad0-b08c-5f5ceec88612',
+'39d51e66-eb65-4b1e-8005-9b8097745067',
+'e0a5e4e5-1ab4-45a3-beb5-828afec3871e',
+'b5c28f48-dccb-4f37-86c6-e6a92bb076ef',
+'59d76eda-b25c-4fcb-8935-2a12c29dafab',
+'0bdd6fbc-94b7-4f72-b770-64420c32ad61',
+'505cee83-0a47-4a31-8884-d314fbe75122',
+'64c2a5aa-c710-4c34-8a3d-585e1c91e7bc',
+'a8d67223-4d3e-40fb-b3b6-ff0f20462c1b',
+'467c26f4-a0ed-46b8-9950-7b5e8a64e700',
+'99657caa-b017-4d29-b0bb-941e785ac436',
+'16251d71-c74c-4058-9397-e394aa05b7b6',
+'8a0cbae6-b411-44bb-9eb8-5925f67ceca2',
+'70b70e79-3ddc-425e-8bab-0896776eb7f0',
+'3f12cd74-9219-4f5d-96f8-3ec75814adb0',
+'1ce6fef4-00b8-4328-955b-de6dfa6ae347',
+'78b847e0-e971-4f00-a9ab-8cb24f968c53')
+group by 1,2
+;
+
+
