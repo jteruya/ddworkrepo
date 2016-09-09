@@ -7,18 +7,21 @@ select ecs.applicationid
      , ecs.enddate
      , ecs.eventtype
      , ecs.openevent
-     , case when ecs.directmessaging = 1 and ecs.binaryversion >= '6' then 1 else 0 end as dmflag
-     , case when ecs.topicchannel = 1 and ecs.binaryversion >= '6.2' then 1 else 0 end as tcflag
+     , case when ecs.directmessaging = 1 /*and ecs.binaryversion >= '6'*/ then 1 else 0 end as dmflag
+     , case when ecs.topicchannel = 1 /*and (ecs.binaryversion <> '6.1' and ecs.binaryversion <> '6.1.%' and ecs.binaryversion <> '6.0' and ecs.binaryversion <> '6.0.%')*/ then 1 else 0 end as tcflag
      , ecs.topicchannelcnt as tc
-     , case when ecs.sessionchannel = 1 and ecs.binaryversion >= '6.8' then 1 else 0 end as scflag
+     , case when ecs.sessionchannel = 1 /*and ecs.binaryversion >= '6.8'*/ then 1 else 0 end as scflag
 from eventcube.eventcubesummary ecs
 left join eventcube.testevents test
 on ecs.applicationid = test.applicationid
 where test.applicationid is null
 and ecs.enddate < current_date
+/*
 and ((ecs.binaryversion >= '6.8' and ecs.sessionchannel = 1)
 or (ecs.binaryversion >= '6.2' and ecs.topicchannel = 1)
 or (ecs.binaryversion >= '6' and ecs.directmessaging = 1))
+*/
+and ecs.binaryversion >= '6' and (ecs.sessionchannel = 1 or ecs.topicchannel = 1 or ecs.directmessaging = 1)
 ;
 
 -- Get the (Non-Disabled) Event Users
@@ -232,7 +235,8 @@ left join (select upper(application_id) as applicationid
            join ratings_topic topic
            on cast(views.metadata->>'ListId' as bigint) = topic.topicid
            where views.identifier = 'list'
-           and cast(views.metadata->>'ListId' as varchar) <> 'items'
+           AND metadata->>'ListId' NOT IN ('listID','items','dd://agenda/')
+           --and cast(views.metadata->>'ListId' as varchar) <> 'items'
            and topic.listtypeid = 2
            and topic.isdisabled = 0
            group by 1
@@ -258,7 +262,8 @@ where events.tcflag = 1
 
 -- Event Counts
 select count(case when dmflag = 1 then 1 else null end) as "How many events have used DM?"
-     , count(case when tcflag = 1 then 1 else null end) as "How many events have used Channels?" 
+     , count(case when tcflag = 1 then 1 else null end) as "How many events have used Channels?"
+     , count(case when scflag = 1 then 1 else null end) as "How many events have used Session Channel?" 
 from jt.dp529_events
 ;
 

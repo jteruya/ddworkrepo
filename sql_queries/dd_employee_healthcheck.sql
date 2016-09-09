@@ -110,9 +110,20 @@ order by 1
 
 
 
-select count(distinct globaluserid)
+
+
+select *
+from kevin.ratings_globaluserdetails
+where globaluserid in (
+select distinct globaluserid
 from pride_users
-where isdisabled = 0;
+where created >= '2014-01-01'
+and isdisabled = 1
+and extract(year from updated)::int * 100 + extract(month from updated) = 201608
+)
+and applicationid = 'BFFEE970-C8B3-4A2D-89EF-A9C012000ABB'
+;
+
 
 
 
