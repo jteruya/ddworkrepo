@@ -15,11 +15,11 @@ select users.userid
      , users.created
      , users.updated
      , users.isdisabled
-from authdb_is_users users
-left join ratings_usergroupsmapping mappings
+from public.authdb_is_users users
+left join public.ratings_usergroupsmapping mappings
 on users.userid = mappings.userid
 left join (select *
-           from ratings_usergroups
+           from public.ratings_usergroups
            where applicationid = 'BFFEE970-C8B3-4A2D-89EF-A9C012000ABB'
            and isdisabled = false) groups
 on mappings.usergroupid = groups.usergroupid 
@@ -119,12 +119,8 @@ select distinct globaluserid
 from pride_users
 where created >= '2014-01-01'
 and isdisabled = 1
-and extract(year from updated)::int * 100 + extract(month from updated) = 201608
+and extract(year from updated)::int * 100 + extract(month from updated) >= 201609
 )
 and applicationid = 'BFFEE970-C8B3-4A2D-89EF-A9C012000ABB'
 ;
-
-
-
-
 
