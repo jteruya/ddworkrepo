@@ -18,7 +18,7 @@ likes <- dbGetQuery(con, "SELECT * FROM JT.SOEP_Benchmark_Likes;")
 comments <- dbGetQuery(con, "SELECT * FROM JT.SOEP_Benchmark_Comments;")
 follows <- dbGetQuery(con, "SELECT * FROM JT.SOEP_Benchmark_Follows;")
 bookmarks <- dbGetQuery(con, "SELECT * FROM JT.SOEP_Benchmark_Bookmarks;")
-#activityfeed <- dbGetQuery(con, "SELECT * FROM JT.SOEP_Benchmark_ActivityFeed;")
+activityfeed <- dbGetQuery(con, "SELECT * FROM JT.SOEP_Benchmark_ActivityFeed;")
 
 # Combine Hour and Minute Window Fields to make one Field
 posts$hourwindow <- posts$hour * 100 + posts$minutewindow

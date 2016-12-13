@@ -130,7 +130,6 @@ JOIN Channels.Rooms ROOMS
 ON CAST(ACTIONS.Metadata->>'ChannelId' AS BIGINT) = ROOMS.Id
 WHERE ROOMS.Type = 'GROUP'
 AND (ACTIONS.Identifier = 'chatTextButton' AND ACTIONS.Metadata->>'Type' = 'submit') 
-
 ;
 
 
@@ -147,10 +146,13 @@ select events.applicationid
      , users.registeredusers
      , users.activeusers
      , coalesce(dmmicroapp.usercnt,0) as dmmicroappusercnt
+     , coalesce(dmview.usercnt,0) as dmviewusercnt
      , coalesce(dmsentmsg.usercnt,0) as dmsentmsgusercnt
      , case when users.activeusers > 0 then coalesce(dmmicroapp.usercnt,0)::decimal(12,4)/users.activeusers::decimal(12,4) else null end as dmmicroappuserpct
+     , case when users.activeusers > 0  then coalesce(dmview.usercnt,0)::decimal(12,4)/users.activeusers::decimal(12,4) else null end as dmviewuserpct
      , case when users.activeusers > 0  then coalesce(dmsentmsg.usercnt,0)::decimal(12,4)/users.activeusers::decimal(12,4) else null end as dmsentmsguserpct
      , coalesce(dmmicroapp.actioncnt,0) as dmmicroappactioncnt
+     , coalesce(dmview.viewcnt,0) as dmviewcnt
      , coalesce(dmsentmsg.actioncnt,0) as dmsentmsgactioncnt
 -- Event Population
 from jt.dp529_events events
@@ -171,6 +173,18 @@ left join (select upper(application_id) as applicationid
            group by 1
            ) dmmicroapp
 on users.applicationid = dmmicroapp.applicationid
+-- Users that view a DM
+left join (select upper(application_id) as applicationid
+                , count(distinct global_user_id) as usercnt
+                , count(*) as viewcnt
+           from jt.dp529_views_users actions
+           join channels.rooms rooms
+           on cast(actions.metadata->>'ChannelId' as bigint) = rooms.id
+           where actions.identifier = 'chat'
+           and rooms.type = 'GROUP'
+           group by 1
+           ) dmview
+on users.applicationid = dmview.applicationid  
 -- Users that sent a message
 left join (select upper(application_id) as applicationid
                 , count(distinct global_user_id) as usercnt
@@ -453,3 +467,24 @@ order by 3,4,1
 ;
 
 
+
+SELECT YearMonth
+     , (DMEventPct - FIRST_VALUE(DMEventPct) OVER (ORDER BY YearMonth ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING))/(FIRST_VALUE(DMEventPct) OVER (ORDER BY YearMonth ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING)) * 100 AS DMFeatureGrowth
+     , CASE WHEN FIRST_VALUE(TCEventPct) OVER (ORDER BY YearMonth ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) > 0 THEN (TCEventPct - FIRST_VALUE(TCEventPct) OVER (ORDER BY YearMonth ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING))/(FIRST_VALUE(TCEventPct) OVER (ORDER BY YearMonth ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING)) * 100 ELSE NULL END AS TCFeatureGrowth
+     , CASE WHEN FIRST_VALUE(SCEventPct) OVER (ORDER BY YearMonth ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) > 0 THEN (SCEventPct - FIRST_VALUE(SCEventPct) OVER (ORDER BY YearMonth ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING))/(FIRST_VALUE(SCEventPct) OVER (ORDER BY YearMonth ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING)) * 100 ELSE NULL END AS SCFeatureGrowth
+FROM (
+SELECT CAST(EXTRACT(YEAR FROM StartDate) * 100 + EXTRACT(MONTH FROM StartDate) AS INT) AS YearMonth
+     , COUNT(*) AS EventCnt
+     , COUNT(CASE WHEN DirectMessaging = 1 THEN 1 ELSE NULL END) AS DMEventCnt
+     , COUNT(CASE WHEN TopicChannel = 1 THEN 1 ELSE NULL END) AS TCEventCnt
+     , COUNT(CASE WHEN SessionChannel = 1 THEN 1 ELSE NULL END) AS SCEventCnt
+     , COUNT(*)::DECIMAL(12,4)/COUNT(*)::DECIMAL(12,4) AS EventPct
+     , COUNT(CASE WHEN DirectMessaging = 1 THEN 1 ELSE NULL END)::DECIMAL(12,4)/COUNT(*)::DECIMAL(12,4) AS DMEventPct
+     , COUNT(CASE WHEN TopicChannel = 1 THEN 1 ELSE NULL END)::DECIMAL(12,4)/COUNT(*)::DECIMAL(12,4) AS TCEventPct
+     , COUNT(CASE WHEN SessionChannel = 1 THEN 1 ELSE NULL END)::DECIMAL(12,4)/COUNT(*)::DECIMAL(12,4) AS SCEventPct
+     , COUNT(CASE WHEN DirectMessaging = 0 AND TopicChannel = 0 AND SessionChannel = 0 THEN 1 ELSE NULL END)::DECIMAL(12,4)/COUNT(*)::DECIMAL(12,4) AS NoMsgEventPct
+FROM JT.DP529_Events
+WHERE StartDate >= '2016-01-01' AND StartDate <= '2016-11-30' AND EndDate <= '2016-11-30'
+GROUP BY 1
+ORDER BY 1
+) A;
